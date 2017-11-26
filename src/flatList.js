@@ -50,11 +50,6 @@ class FlatList extends Component {
   }
 
   componentWillMount() {
-    const {height, rowsCount, rowHeight} = this.props;
-    const minNumItems = Math.ceil(height / rowHeight);
-    const maxNumItems = minNumItems + 1;
-    const maxVisibleRows =  Math.min(rowsCount, maxNumItems);
-    this.setState({maxVisibleRows});
   }
 
   componentDidUpdate (prevProps, prevState) {
@@ -68,6 +63,12 @@ class FlatList extends Component {
     if (rowsCount === 0) {
       this.setState({ scrollTop: 0 });
     }
+  }
+  getMaxVisibleItems = () => {
+    const {height, rowsCount, rowHeight} = this.props;
+    const minNumItems = Math.ceil(height / rowHeight);
+    const maxNumItems = minNumItems + 1;
+    return Math.min(rowsCount, maxNumItems);
   }
 
   getNextItemIndex = (props = this.props, state = this.state) => {
@@ -84,10 +85,22 @@ class FlatList extends Component {
     if (event.target !== this.refs.scrollingContainer) {
       return
     }
-    const { height = 500, rowsCount = 8040, rowHeight = 100 } = this.props;
+    const { height, rowsCount, rowHeight, data } = this.props;
+    const maxVisibleItems  = this.getMaxVisibleItems();
     const totalRowsHeight = rowsCount * rowHeight;
     const scrollTop = Math.min(totalRowsHeight - height, event.target.scrollTop);
+    const dateLen = data.length;
     if (this.state.scrollTop === scrollTop) return;
+    if (scrollTop > 0) {
+      const nextItemIndex = this.getNextItemIndex();
+      if (nextItemIndex + maxVisibleItems === dateLen) {
+        // if (isVisible(node)) {}
+        if (scrollTop === totalRowsHeight - height) {
+          const {onEndReached = () => {}} = this.props;
+          onEndReached();
+        }
+      }
+    }
     this.debounceScroll();
     this.setNextState({isScrolling: true, scrollTop}); 
   }
@@ -102,29 +115,28 @@ class FlatList extends Component {
     })
   }
   
- debounceScroll() {
-   if (this._disablePointerEventsTimeoutId) {
-     clearTimeout(this._disablePointerEventsTimeoutId);
-   }
-   this._disablePointerEventsTimeoutId = setTimeout(() => {
-     this._disablePointerEventsTimeoutId = null;
-       this.setState({
-         isScrolling: false
-       })
+  debounceScroll() {
+    if (this._disablePointerEventsTimeoutId) {
+      clearTimeout(this._disablePointerEventsTimeoutId);
+    }
+    this._disablePointerEventsTimeoutId = setTimeout(() => {
+      this._disablePointerEventsTimeoutId = null;
+        this.setState({isScrolling: false})
     }, 150);
   }
 
   render() {
     const {data, renderItem, height, rowsCount, rowHeight} = this.props;
 
-    const {isScrolling, scrollTop, maxVisibleRows} = this.state;
+    const {isScrolling, scrollTop} = this.state;
     const totalRowsHeight = rowsCount * rowHeight;
+    const maxVisibleItems = this.getMaxVisibleItems();
     const paddingTop = scrollTop - (scrollTop % rowHeight);
     let shouldToShowChildrenList = [];
     
     const nextItemIndex = this.getNextItemIndex();
     shouldToShowChildrenList = [];
-    const endItemIndex = Math.min(rowsCount, nextItemIndex + maxVisibleRows) - 1;
+    const endItemIndex = Math.min(rowsCount, nextItemIndex + maxVisibleItems) - 1;
     for (let i = nextItemIndex; i <= endItemIndex; i++) {
       shouldToShowChildrenList.push(renderItem(data[i], i));
     }

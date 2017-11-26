@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-
 import './App.css';
 import FlatList from './flatList';
 
@@ -23,14 +22,16 @@ class App extends Component {
   getTopticItem() {
     axios.get('https://api.readhub.me/topic')
       .then((response) => {
-        console.log('response.data', response.data);
+        /* console.log('response.data', response.data);
         const responseData = response.data.data;
         const largeList = Array(8000);
         for (let i = 0, len = largeList.length; i < len; i++) {
           largeList[i] = responseData[0];
         }
         console.log('largeList', largeList);
-        this.setState({ dataList: largeList.concat(responseData)});
+        this.setState({ dataList: largeList.concat(responseData).splice(0, 13)}); */
+        const responseData = response.data.data;
+        this.setState({ dataList: responseData});
       }).catch((error) => {
         console.log(error);
     });
@@ -41,7 +42,6 @@ class App extends Component {
     const cursor = moment(this.state.dataList[this.state.dataList.length - 1].publishDate).unix()*1000;
     axios.get('https://api.readhub.me/topic', { params: { lastCursor: cursor } })
       .then((response) => {
-        console.log('response loadmore', response);
         this.setState({ dataList: [...this.state.dataList, ...response.data.data], loading: false })
       }).catch((error) => {
         this.setState({ loading: false })
@@ -54,6 +54,7 @@ class App extends Component {
     }
     return (
       <div
+        ref={`item-${index}`}
         key={index}
         style={{
           height: 100,
@@ -107,7 +108,6 @@ class App extends Component {
   }
   render() {
     const {dataList} = this.state;
-    console.log('dataList', dataList);
     return (
       <div
         style={{
@@ -126,7 +126,7 @@ class App extends Component {
         >
           <FlatList
             height={500}
-            rowsCount = {8040}
+            rowsCount = {dataList.length}//8040
             rowHeight={100}
             rowRenderer
             data={dataList}
