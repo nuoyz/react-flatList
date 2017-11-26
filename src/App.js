@@ -24,7 +24,13 @@ class App extends Component {
     axios.get('https://api.readhub.me/topic')
       .then((response) => {
         console.log('response.data', response.data);
-        this.setState({ dataList: response.data.data})
+        const responseData = response.data.data;
+        const largeList = Array(8000);
+        for (let i = 0, len = largeList.length; i < len; i++) {
+          largeList[i] = responseData[0];
+        }
+        console.log('largeList', largeList);
+        this.setState({ dataList: largeList.concat(responseData)});
       }).catch((error) => {
         console.log(error);
     });
@@ -43,10 +49,15 @@ class App extends Component {
   }
   
   renderTopicItem = (item, index) => {
+    if(!item) {
+      return <div>loading</div>
+    }
     return (
       <div
         key={index}
         style={{
+          height: 100,
+          overflow: 'hidden',
           backgroundColor: '#ffffff',
           borderBottom: '1px solid #e6e6e6',
           position: 'relative'
@@ -66,7 +77,7 @@ class App extends Component {
               userselect: 'none'
             }}
           >
-            {item.title}
+            {`${index} ${item.title}`}
           </h2>
           </div>
           <span
@@ -96,6 +107,7 @@ class App extends Component {
   }
   render() {
     const {dataList} = this.state;
+    console.log('dataList', dataList);
     return (
       <div
         style={{
@@ -104,6 +116,7 @@ class App extends Component {
           alignItems: 'center',
         }}
       >
+        <h1>列表长度{dataList.length}</h1>
         <div
           style={{
             maxWidth: 625,
@@ -112,6 +125,10 @@ class App extends Component {
           }}
         >
           <FlatList
+            height={500}
+            rowsCount = {8040}
+            rowHeight={100}
+            rowRenderer
             data={dataList}
             renderItem={this.renderTopicItem}
             onEndReached={() => this.handleLoadMore()}

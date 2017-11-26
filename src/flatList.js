@@ -39,76 +39,124 @@ methods:
   flashScrollIndicators()
 */
 import React, { Component } from 'react';
-
+import raf from 'raf'
 class FlatList extends Component {
+
   state = {
     dataList: [],
-    loading: false
+    loading: false,
+    scrollTop: 0,
+    isScrolling: false
   }
+
   componentWillMount() {
+    const {height, rowsCount, rowHeight} = this.props;
+    const minNumItems = Math.ceil(height / rowHeight);
+    const maxNumItems = minNumItems + 1;
+    const maxVisibleRows =  Math.min(rowsCount, maxNumItems);
+    this.setState({maxVisibleRows});
   }
 
-  componentDidMount() {
-    const self = this;
-    const { loading } = this.state;
-    window.addEventListener('scroll', this.debounce(function(){
-      //获取目标元素高度
-      console.log('111111111');
-      const ele = document.getElementById('topicItemList');
-      const eleHeight = parseInt(window.getComputedStyle(ele, null).height); //元素高度
-      const scrollTop = document.documentElement.scrollTop; //滚动高度
-      const clientHeight =  document.documentElement.clientHeight; //视口高度
-      if (scrollTop + clientHeight >= eleHeight && loading === false) {
-        self.props.onEndReached()
-      }
-    }, 500),false);
+  componentDidUpdate (prevProps, prevState) {
+    const {scrollTop} = this.state;
+    if (scrollTop >= 0 && scrollTop !== prevState.scrollTop) {
+      this.refs.scrollingContainer.scrollTop = scrollTop;
+    }
+  }
+  componentWillUpdate (prevProps, prevState) {
+    const { rowsCount } = this.props;
+    if (rowsCount === 0) {
+      this.setState({ scrollTop: 0 });
+    }
   }
 
-  // 防抖动函数
- debounce = (func, wait, immediate) => {
-   console.log('555555555');
-	let timeout;
-	return function() {
-    const context = this;
-    const args = arguments;
-		const later = function() {
-			timeout = null;
-			if (!immediate) func.apply(context, args);
-		};
-		const callNow = immediate & !timeout;
-		clearTimeout(timeout);
-		timeout = setTimeout(later, wait);
-		if (callNow) func.apply(context, args);
-	  };
-  };
+  getNextItemIndex = (props = this.props, state = this.state) => {
+    const {height, rowHeight, rowsCount} = props;
+    const { scrollTop } = state;
+    const totalRowsHeight = rowHeight * rowsCount;
+    const safeScrollTop = Math.max(0, Math.min(totalRowsHeight - height, scrollTop))
+    const scrollPercentage = safeScrollTop / totalRowsHeight;
+    return Math.floor(scrollPercentage * rowsCount);
+  }
 
-  throttle = (func, wait, mustRun) => {
-	  let timeout;
-		let startTime = new Date();
-    return function() {
-      const context = this;
-      const args = arguments;
-      const curTime = new Date();
   
-      clearTimeout(timeout);
-      // 如果达到了规定的触发时间间隔，触发 handler
-      if(curTime - startTime >= mustRun){
-        func.apply(context,args);
-        startTime = curTime;
-      // 没达到触发间隔，重新设定定时器
-      }else{
-        timeout = setTimeout(func, wait);
-      }
-    };
-  };
+  handleOnScroll = (event) => {
+    if (event.target !== this.refs.scrollingContainer) {
+      return
+    }
+    const { height = 500, rowsCount = 8040, rowHeight = 100 } = this.props;
+    const totalRowsHeight = rowsCount * rowHeight;
+    const scrollTop = Math.min(totalRowsHeight - height, event.target.scrollTop);
+    if (this.state.scrollTop === scrollTop) return;
+    this.debounceScroll();
+    this.setNextState({isScrolling: true, scrollTop}); 
+  }
+
+  setNextState = (state) => {
+    if (this._setNextStateAnimationFrameId) {
+      raf.cancel(this._setNextStateAnimationFrameId);
+    }
+    this._setNextStateAnimationFrameId = raf(() => {
+      this._setNextStateAnimationFrameId = null;
+      this.setState(state);
+    })
+  }
   
+ debounceScroll() {
+   if (this._disablePointerEventsTimeoutId) {
+     clearTimeout(this._disablePointerEventsTimeoutId);
+   }
+   this._disablePointerEventsTimeoutId = setTimeout(() => {
+     this._disablePointerEventsTimeoutId = null;
+       this.setState({
+         isScrolling: false
+       })
+    }, 150);
+  }
+
   render() {
-    const {data, renderItem} = this.props;
+    const {data, renderItem, height, rowsCount, rowHeight} = this.props;
+
+    const {isScrolling, scrollTop, maxVisibleRows} = this.state;
+    const totalRowsHeight = rowsCount * rowHeight;
+    const paddingTop = scrollTop - (scrollTop % rowHeight);
+    let shouldToShowChildrenList = [];
+    
+    const nextItemIndex = this.getNextItemIndex();
+    shouldToShowChildrenList = [];
+    const endItemIndex = Math.min(rowsCount, nextItemIndex + maxVisibleRows) - 1;
+    for (let i = nextItemIndex; i <= endItemIndex; i++) {
+      shouldToShowChildrenList.push(renderItem(data[i], i));
+    }
+
     return (
-      <div
-        id='topicItemList'
-      >
-        {data.map((item, index) => renderItem(item, index))}
+      <div>
+        <h3>已被渲染的列表长度{shouldToShowChildrenList.length}</h3>
+        <div
+          ref='scrollingContainer'
+          id='flatListRootEle'
+          onScroll={this.handleOnScroll}
+          style={{
+            height,
+            width: 600,
+            border: '1px solid black',
+            overflowX: 'hidden',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            style={{
+              boxSizing: 'border-box',
+              height: totalRowsHeight,
+              maxHeight: totalRowsHeight,
+              paddingTop: paddingTop,
+              overflow: 'hidden',
+              pointerEvents: isScrolling ? 'none' : 'auto'
+            }}
+          >
+            {shouldToShowChildrenList}
+          </div>
+        </div>
       </div>
     );
   }
