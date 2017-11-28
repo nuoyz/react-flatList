@@ -39,7 +39,7 @@ methods:
   flashScrollIndicators()
 */
 import React, { Component } from 'react';
-import raf from 'raf'
+import raf from 'raf';
 class FlatList extends Component {
 
   state = {
@@ -51,12 +51,12 @@ class FlatList extends Component {
 
   componentWillMount() {
   }
-
+  componentDidMount() {
+    const scrollListener= () => this.handleOnScroll();
+    window.removeEventListener('scroll', scrollListener);
+    window.addEventListener('scroll', scrollListener);
+  }
   componentDidUpdate (prevProps, prevState) {
-    const {scrollTop} = this.state;
-    if (scrollTop >= 0 && scrollTop !== prevState.scrollTop) {
-      this.refs.scrollingContainer.scrollTop = scrollTop;
-    }
   }
   componentWillUpdate (prevProps, prevState) {
     const { rowsCount } = this.props;
@@ -65,37 +65,38 @@ class FlatList extends Component {
     }
   }
   getMaxVisibleItems = () => {
-    const {height, rowsCount, rowHeight} = this.props;
-    const minNumItems = Math.ceil(height / rowHeight);
+    const {rowsCount, rowHeight} = this.props;
+    const clientHeight = window.innerHeight || document.documentElement.clientHeight;
+    const minNumItems = Math.ceil(clientHeight / rowHeight);
     const maxNumItems = minNumItems + 1;
     return Math.min(rowsCount, maxNumItems);
   }
 
   getNextItemIndex = (props = this.props, state = this.state) => {
-    const {height, rowHeight, rowsCount} = props;
+    const {rowHeight, rowsCount} = props;
+    const clientHeight = window.innerHeight || document.documentElement.clientHeight;
     const { scrollTop } = state;
     const totalRowsHeight = rowHeight * rowsCount;
-    const safeScrollTop = Math.max(0, Math.min(totalRowsHeight - height, scrollTop))
+    const safeScrollTop = Math.max(0, Math.min(totalRowsHeight - clientHeight, scrollTop))
     const scrollPercentage = safeScrollTop / totalRowsHeight;
     return Math.floor(scrollPercentage * rowsCount);
   }
 
   
   handleOnScroll = (event) => {
-    if (event.target !== this.refs.scrollingContainer) {
-      return
-    }
-    const { height, rowsCount, rowHeight, data } = this.props;
+    const {rowsCount, rowHeight, data } = this.props;
+    const clientHeight = window.innerHeight || document.documentElement.clientHeight;
     const maxVisibleItems  = this.getMaxVisibleItems();
     const totalRowsHeight = rowsCount * rowHeight;
-    const scrollTop = Math.min(totalRowsHeight - height, event.target.scrollTop);
+    const scrollTop = Math.min(totalRowsHeight - clientHeight, document.documentElement.scrollTop);
     const dateLen = data.length;
     if (this.state.scrollTop === scrollTop) return;
     if (scrollTop > 0) {
+      console.log('scrollTop', scrollTop);
       const nextItemIndex = this.getNextItemIndex();
-      if (nextItemIndex + maxVisibleItems === dateLen) {
+      if (nextItemIndex + maxVisibleItems >= dateLen) {
         // if (isVisible(node)) {}
-        if (scrollTop === totalRowsHeight - height) {
+        if (scrollTop === totalRowsHeight - clientHeight) {
           const {onEndReached = () => {}} = this.props;
           onEndReached();
         }
@@ -126,8 +127,7 @@ class FlatList extends Component {
   }
 
   render() {
-    const {data, renderItem, height, rowsCount, rowHeight, isInRoot} = this.props;
-
+    const {data, renderItem, rowsCount, rowHeight} = this.props;
     const {isScrolling, scrollTop} = this.state;
     const totalRowsHeight = rowsCount * rowHeight;
     const maxVisibleItems = this.getMaxVisibleItems();
@@ -141,52 +141,19 @@ class FlatList extends Component {
       shouldToShowChildrenList.push(renderItem(data[i], i));
     }
     
-    if (isInRoot) {
-      return (
-        <div
-          style={{
-            boxSizing: 'border-box',
-            height: totalRowsHeight,
-            maxHeight: totalRowsHeight,
-            paddingTop: paddingTop,
-            overflow: 'hidden',
-            pointerEvents: isScrolling ? 'none' : 'auto'
-          }}
-        >
-          {shouldToShowChildrenList}
-        </div>  
-      );
-    }
-
     return (
-      <div>
-        <h3>已被渲染的列表长度{shouldToShowChildrenList.length}</h3>
-        <div
-          ref='scrollingContainer'
-          id='flatListRootEle'
-          onScroll={this.handleOnScroll}
-          style={{
-            height,
-            width: 600,
-            border: '1px solid black',
-            overflowX: 'hidden',
-            overflowY: 'auto'
-          }}
-        >
-          <div
-            style={{
-              boxSizing: 'border-box',
-              height: totalRowsHeight,
-              maxHeight: totalRowsHeight,
-              paddingTop: paddingTop,
-              overflow: 'hidden',
-              pointerEvents: isScrolling ? 'none' : 'auto'
-            }}
-          >
-            {shouldToShowChildrenList}
-          </div>
-        </div>
-      </div>
+      <div
+        style={{
+          boxSizing: 'border-box',
+          height: totalRowsHeight,
+          maxHeight: totalRowsHeight,
+          paddingTop: paddingTop,
+          overflow: 'hidden',
+          pointerEvents: isScrolling ? 'none' : 'auto'
+        }}
+      >
+        {shouldToShowChildrenList}
+      </div>  
     );
   }
 }

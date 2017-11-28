@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import './App.css';
 import FlatList from './flatList';
-
+import ListView from './listView';
 import axios from 'axios'
 import moment from 'moment'
 
@@ -108,6 +108,28 @@ class App extends Component {
   }
   render() {
     const {dataList} = this.state;
+    let children;
+    const isInRoot = true;
+    if (isInRoot) {
+      children = <ListView
+              rowsCount = {dataList.length}//8040
+              rowHeight={100}
+              rowRenderer
+              data={dataList}
+              renderItem={this.renderTopicItem}
+              onEndReached={() => this.handleLoadMore()}
+            />
+    } else {
+      children = <FlatList
+            height={500}
+            rowsCount = {dataList.length}//8040
+            rowHeight={100}
+            rowRenderer
+            data={dataList}
+            renderItem={this.renderTopicItem}
+            onEndReached={() => this.handleLoadMore()}
+          />
+    }
     return (
       <div
         style={{
@@ -124,15 +146,7 @@ class App extends Component {
             width: '100%'
           }}
         >
-          <FlatList
-            height={500}
-            rowsCount = {dataList.length}//8040
-            rowHeight={100}
-            rowRenderer
-            data={dataList}
-            renderItem={this.renderTopicItem}
-            onEndReached={() => this.handleLoadMore()}
-          />
+          {children}
         </div>
       </div>
     );
