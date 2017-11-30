@@ -109,7 +109,7 @@ class App extends Component {
   render() {
     const {dataList} = this.state;
     let children;
-    const isInRoot = true;
+    const isInRoot = false;
     if (isInRoot) {
       children = <ListView
               rowsCount = {dataList.length}//8040
@@ -143,7 +143,9 @@ class App extends Component {
           style={{
             maxWidth: 625,
             flexShrink: 8,
-            width: '100%'
+            width: '100%',
+            //height: 600,
+            //overflowY: 'scroll'
           }}
         >
           {children}

@@ -52,7 +52,7 @@ class FlatList extends Component {
   componentWillMount() {
   }
   componentDidMount() {
-    const scrollListener= () => this.handleOnScroll();
+    const scrollListener= (e) => this.handleOnScroll(e);
     window.removeEventListener('scroll', scrollListener);
     window.addEventListener('scroll', scrollListener);
   }
@@ -84,6 +84,7 @@ class FlatList extends Component {
 
   
   handleOnScroll = (event) => {
+    console.log('event.target', event.target);
     const {rowsCount, rowHeight, data } = this.props;
     const clientHeight = window.innerHeight || document.documentElement.clientHeight;
     const maxVisibleItems  = this.getMaxVisibleItems();
