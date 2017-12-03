@@ -21,3 +21,9 @@ $ npm install --save react-flatlist
 
 ## data
   type: array
+
+## renderItem
+  takes an item from data and renders it into the list
+
+## License
+MIT
